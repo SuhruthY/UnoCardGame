@@ -6,7 +6,4 @@ export interface Player {
   hand: Card[];
   isCurrentTurn: boolean;
   isHuman: boolean;
-  skipNextTurn?: boolean;
-  wildRoulette?: boolean;
-  handRevealTurns?: number;
 }

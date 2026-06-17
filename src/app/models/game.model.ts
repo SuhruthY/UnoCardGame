@@ -1,25 +1,12 @@
-import { Card } from './card.model';
 import { Player } from './player.model';
+import { Card } from './card.model';
 
-export type GamePhase = 'setup' | 'playing' | 'finished' | 'penalty';
+export type GamePhase = 'setup' | 'playing' | 'finished';
 
-export interface PenaltyOption {
-  id: string;
-  name: string;
-  emoji: string;
-  description: string;
-  detail: string;
-}
-
-export interface PenaltyState {
-  active: boolean;
-  loserIds: number[];
-  currentLoserIndex: number;
-  currentPenalty: PenaltyOption | null;
-  penaltyOptions: PenaltyOption[];
-  waitingForSelection: boolean;
-  showApplied: boolean;
-  appMessage: string;
+export interface GameNotification {
+  id: number;
+  message: string;
+  color: string;
 }
 
 export interface GameState {
@@ -33,7 +20,4 @@ export interface GameState {
   pendingDrawCount: number;
   drawnThisTurn: boolean;
   drawnCards: Card[];
-  selectedColor: string | null;
-  adultMode: boolean;
-  penalty: PenaltyState;
 }
