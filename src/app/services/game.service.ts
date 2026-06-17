@@ -21,6 +21,7 @@ export class GameService {
   private notifications: WritableSignal<GameNotification[]> = signal([]);
   private notifId = 0;
   private aiTimer: ReturnType<typeof setTimeout> | null = null;
+  private humanAnalysis: { handSize: number; colorCounts: Record<string, number> } | null = null;
 
   readonly gameState = computed(() => this.state());
   readonly currentPlayer = computed(() => {
@@ -54,10 +55,10 @@ export class GameService {
   private addNotification(message: string, color: string): void {
     const id = this.notifId++;
     const notif: GameNotification = { id, message, color };
-    this.notifications.update(n => [...n, notif]);
+    this.notifications.update(n => [...n.slice(-4), notif]);
     setTimeout(() => {
       this.notifications.update(n => n.filter(x => x.id !== id));
-    }, 3000);
+    }, 3500);
   }
 
   private createDeck(): Card[] {
@@ -128,7 +129,7 @@ export class GameService {
 
     playerList[0].isCurrentTurn = true;
     this.state.update(s => ({ ...s, players: [...playerList] }));
-    this.addNotification('Game started! Your turn.', '#ffd835');
+    this.addNotification('Game started. Your turn.', 'rgba(255,255,255,0.6)');
     this.scheduleAI();
   }
 
@@ -147,10 +148,9 @@ export class GameService {
     if (card.type === 'wild' || card.type === 'wild4') {
       card.chosenColor = chosenColor || this.pickBestColor(player.hand);
       const cName = card.chosenColor.charAt(0).toUpperCase() + card.chosenColor.slice(1);
-      this.addNotification(`${player.name} played Wild → ${cName}`, '#ffd835');
-    } else {
-      let label = card.type === 'number' ? String(card.value) : card.type;
-      this.addNotification(`${player.name} played ${label}`, this.colorHex(card.color));
+      if (!player.isHuman) {
+        this.addNotification(`Bot changed color to ${cName}`, 'rgba(255,255,255,0.6)');
+      }
     }
 
     let newHand = [...player.hand];
@@ -176,12 +176,12 @@ export class GameService {
         phase: 'finished' as GamePhase,
         winner: { ...player, hand: [] },
       }));
-      this.addNotification(`${player.name} wins! 🎉`, '#ffd835');
+      this.addNotification(`${player.name} wins.`, 'rgba(255,255,255,0.8)');
       return;
     }
 
-    if (newHand.length === 1) {
-      this.addNotification(`${player.name} says UNO! 🃏`, '#ffd835');
+    if (newHand.length === 1 && !player.isHuman) {
+      this.addNotification('Bot: UNO!', 'rgba(255,255,255,0.6)');
     }
 
     const pendingDraw = s.pendingDrawCount;
@@ -190,23 +190,26 @@ export class GameService {
 
     if (card.type === 'skip') {
       skipNext = true;
-      const targetIdx = (s.currentPlayerIndex + s.direction + s.players.length) % s.players.length;
-      this.addNotification(`${s.players[targetIdx].name} was skipped! ⏭️`, '#ff9800');
+      if (!player.isHuman) {
+        this.addNotification('Bot skipped your turn!', 'rgba(255,255,255,0.6)');
+      }
     } else if (card.type === 'reverse') {
       if (s.players.length === 2) {
         skipNext = true;
-        const targetIdx = (s.currentPlayerIndex + s.direction + s.players.length) % s.players.length;
-        this.addNotification(`${s.players[targetIdx].name} was skipped! ⏭️`, '#ff9800');
-      } else {
-        this.state.update(st => ({ ...st, direction: (st.direction * -1) as 1 | -1 }));
-        this.addNotification('Direction reversed! 🔄', '#9c27b0');
+        if (!player.isHuman) {
+          this.addNotification('Bot skipped your turn!', 'rgba(255,255,255,0.6)');
+        }
       }
     } else if (card.type === 'draw2') {
       newPendingDraw = pendingDraw + 2;
-      this.addNotification(`${player.name} played +2!`, '#ff9800');
+      if (!player.isHuman) {
+        this.addNotification('Bot played +2!', 'rgba(255,255,255,0.6)');
+      }
     } else if (card.type === 'wild4') {
       newPendingDraw = pendingDraw + 4;
-      this.addNotification(`${player.name} played +4!`, '#ff9800');
+      if (!player.isHuman) {
+        this.addNotification('Bot played +4!', 'rgba(255,255,255,0.6)');
+      }
     }
 
     const advance = skipNext ? 2 : 1;
@@ -243,7 +246,9 @@ export class GameService {
     const drawn = this.drawFromPile(drawCount);
     const newDrawn = [...s.drawnCards, ...drawn];
 
-    this.addNotification(`${player.name} drew ${drawn.length} card${drawn.length > 1 ? 's' : ''}`, '#2196f3');
+    if (!player.isHuman && drawCount > 1) {
+      this.addNotification(`Bot drew ${drawCount} cards`, 'rgba(255,255,255,0.5)');
+    }
 
     const canPlayDrawn = drawn.some(c => this.canPlayCard(c));
 
@@ -355,18 +360,36 @@ export class GameService {
     return best;
   }
 
-  private colorHex(color: CardColor): string {
-    switch (color) {
-      case 'red': return '#e53935';
-      case 'blue': return '#2196f3';
-      case 'green': return '#43a047';
-      case 'yellow': return '#fdd835';
-      default: return '#fff';
+  private analyzeHuman(): void {
+    const s = this.state();
+    const human = s.players.find(p => p.isHuman);
+    if (!human) { this.humanAnalysis = null; return; }
+    const colorCounts: Record<string, number> = { red: 0, blue: 0, green: 0, yellow: 0 };
+    for (const c of human.hand) {
+      if (c.color !== 'wild') colorCounts[c.color] = (colorCounts[c.color] || 0) + 1;
     }
+    this.humanAnalysis = { handSize: human.hand.length, colorCounts };
+  }
+
+  private pickColorHumanLacks(): CardColor {
+    if (this.humanAnalysis) {
+      const entries = Object.entries(this.humanAnalysis.colorCounts).sort((a, b) => a[1] - b[1]);
+      return entries[0][0] as CardColor;
+    }
+    return this.pickHumanColor();
+  }
+
+  private pickHumanColor(): CardColor {
+    const colors: CardColor[] = ['red', 'blue', 'green', 'yellow'];
+    return colors[Math.floor(Math.random() * colors.length)];
+  }
+
+  private colorScore(color: CardColor): number {
+    if (!this.humanAnalysis) return 0;
+    return this.humanAnalysis.colorCounts[color] || 0;
   }
 
   private endTurn(): void {
-    const currentPlayerName = this.state().players[this.state().currentPlayerIndex]?.name || '';
     this.state.update(s => {
       const prevPlayerIdx = s.currentPlayerIndex;
       let nextIdx = (prevPlayerIdx + s.direction + s.players.length) % s.players.length;
@@ -374,13 +397,6 @@ export class GameService {
       players[nextIdx] = { ...players[nextIdx], isCurrentTurn: true };
       return { ...s, currentPlayerIndex: nextIdx, players, drawnThisTurn: false, drawnCards: [] };
     });
-
-    const s = this.state();
-    const nextPlayer = s.players[s.currentPlayerIndex];
-    if (nextPlayer) {
-      this.addNotification(`${nextPlayer.name}'s turn`, nextPlayer.isHuman ? '#ffd835' : '#9e9e9e');
-    }
-
     this.scheduleAI();
   }
 
@@ -397,7 +413,12 @@ export class GameService {
     if (s.phase !== 'playing') return;
     const player = s.players[s.currentPlayerIndex];
     if (!player || player.isHuman) return;
-    this.aiTimer = setTimeout(() => this.runAI(), 800);
+    this.aiTimer = setTimeout(() => this.runAI(), 600);
+  }
+
+  private isHumanNext(s: GameState): boolean {
+    let nextIdx = (s.currentPlayerIndex + s.direction + s.players.length) % s.players.length;
+    return s.players[nextIdx]?.isHuman ?? false;
   }
 
   private runAI(): void {
@@ -406,6 +427,8 @@ export class GameService {
 
     const player = s.players[s.currentPlayerIndex];
     if (!player || player.isHuman) return;
+
+    this.analyzeHuman();
 
     const drawnPlayable = s.drawnCards.filter(c => this.canPlayCard(c));
     if (drawnPlayable.length > 0) {
@@ -425,20 +448,70 @@ export class GameService {
       return;
     }
 
-    if (playableCards.length > 0) {
-      const wild4 = playableCards.filter(c => c.type === 'wild4');
-      const wild = playableCards.filter(c => c.type === 'wild');
-      const draw2 = playableCards.filter(c => c.type === 'draw2');
-      const skip = playableCards.filter(c => c.type === 'skip');
-      const reverse = playableCards.filter(c => c.type === 'reverse');
-      const numbers = playableCards.filter(c => c.type === 'number');
+    if (playableCards.length === 0) {
+      this.drawCard();
+      return;
+    }
 
-      if (draw2.length > 0) { this.playCard(draw2[0].id); return; }
-      if (skip.length > 0) { this.playCard(skip[0].id); return; }
-      if (reverse.length > 0) { this.playCard(reverse[0].id); return; }
-      if (numbers.length > 0) { this.playCard(numbers[0].id); return; }
-      if (wild4.length > 0) { this.playCard(wild4[0].id, this.pickBestColor(player.hand)); return; }
-      if (wild.length > 0) { this.playCard(wild[0].id, this.pickBestColor(player.hand)); return; }
+    const wild4Cards = playableCards.filter(c => c.type === 'wild4');
+    const wildCards = playableCards.filter(c => c.type === 'wild');
+    const draw2Cards = playableCards.filter(c => c.type === 'draw2');
+    const skipCards = playableCards.filter(c => c.type === 'skip');
+    const reverseCards = playableCards.filter(c => c.type === 'reverse');
+    const numberCards = playableCards.filter(c => c.type === 'number');
+
+    const humanNext = this.isHumanNext(s);
+
+    if (draw2Cards.length > 0 && humanNext) {
+      this.playCard(draw2Cards[0].id);
+      return;
+    }
+
+    if (skipCards.length > 0 && humanNext) {
+      this.playCard(skipCards[0].id);
+      return;
+    }
+
+    if (reverseCards.length > 0 && s.players.length === 2 && humanNext) {
+      this.playCard(reverseCards[0].id);
+      return;
+    }
+
+    if (numberCards.length > 0) {
+      const sorted = numberCards.sort((a, b) => {
+        const aScore = a.color !== 'wild' ? this.colorScore(a.color) : 0;
+        const bScore = b.color !== 'wild' ? this.colorScore(b.color) : 0;
+        return aScore - bScore;
+      });
+      this.playCard(sorted[0].id);
+      return;
+    }
+
+    if (wild4Cards.length > 0) {
+      const color = this.pickColorHumanLacks();
+      this.playCard(wild4Cards[0].id, color);
+      return;
+    }
+
+    if (wildCards.length > 0) {
+      const color = this.pickColorHumanLacks();
+      this.playCard(wildCards[0].id, color);
+      return;
+    }
+
+    if (draw2Cards.length > 0) {
+      this.playCard(draw2Cards[0].id);
+      return;
+    }
+
+    if (skipCards.length > 0) {
+      this.playCard(skipCards[0].id);
+      return;
+    }
+
+    if (reverseCards.length > 0) {
+      this.playCard(reverseCards[0].id);
+      return;
     }
 
     this.drawCard();
