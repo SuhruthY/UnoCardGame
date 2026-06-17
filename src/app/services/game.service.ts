@@ -2,9 +2,12 @@ import { Injectable, signal, computed, WritableSignal } from '@angular/core';
 import { Card, CardColor } from '../models/card.model';
 import { Player } from '../models/player.model';
 import { GameState, GamePhase, GameNotification } from '../models/game.model';
+import { SoundService } from './sound.service';
 
 @Injectable({ providedIn: 'root' })
 export class GameService {
+  constructor(private sound: SoundService) {}
+
   private state: WritableSignal<GameState> = signal<GameState>({
     players: [],
     drawPile: [],
@@ -151,6 +154,11 @@ export class GameService {
       if (!player.isHuman) {
         this.addNotification(`Bot changed color to ${cName}`, 'rgba(255,255,255,0.6)');
       }
+      this.sound.wildCard();
+    } else if (card.type === 'skip' || card.type === 'reverse' || card.type === 'draw2') {
+      this.sound.actionCard();
+    } else {
+      this.sound.playCard();
     }
 
     let newHand = [...player.hand];
@@ -176,12 +184,20 @@ export class GameService {
         phase: 'finished' as GamePhase,
         winner: { ...player, hand: [] },
       }));
+      if (player.isHuman) {
+        this.sound.win();
+      } else {
+        this.sound.lose();
+      }
       this.addNotification(`${player.name} wins.`, 'rgba(255,255,255,0.8)');
       return;
     }
 
-    if (newHand.length === 1 && !player.isHuman) {
-      this.addNotification('Bot: UNO!', 'rgba(255,255,255,0.6)');
+    if (newHand.length === 1) {
+      if (!player.isHuman) {
+        this.addNotification('Bot: UNO!', 'rgba(255,255,255,0.6)');
+      }
+      this.sound.uno();
     }
 
     const pendingDraw = s.pendingDrawCount;
@@ -249,6 +265,7 @@ export class GameService {
     if (!player.isHuman && drawCount > 1) {
       this.addNotification(`Bot drew ${drawCount} cards`, 'rgba(255,255,255,0.5)');
     }
+    this.sound.drawCard();
 
     const canPlayDrawn = drawn.some(c => this.canPlayCard(c));
 
@@ -397,6 +414,11 @@ export class GameService {
       players[nextIdx] = { ...players[nextIdx], isCurrentTurn: true };
       return { ...s, currentPlayerIndex: nextIdx, players, drawnThisTurn: false, drawnCards: [] };
     });
+    const s = this.state();
+    const nextPlayer = s.players[s.currentPlayerIndex];
+    if (nextPlayer?.isHuman) {
+      this.sound.yourTurn();
+    }
     this.scheduleAI();
   }
 
