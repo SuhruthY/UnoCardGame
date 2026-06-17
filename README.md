@@ -1,27 +1,92 @@
-# UnoGame
+# UNO Card Game
 
-This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 18.2.7.
+A browser-based UNO card game built with Angular 18. Play against an AI opponent with real-time sound effects, animated notifications, and a sleek dark-themed UI.
 
-## Development server
+## Features
 
-Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The application will automatically reload if you change any of the source files.
+- **Single-player vs AI** — Play against a strategic bot that analyzes your hand and adapts its moves
+- **Full UNO rules** — Skip, Reverse, Draw 2, Wild, and Wild Draw 4 cards with stacking mechanics
+- **Sound effects** — Synthesized audio feedback for card plays, action cards, UNO calls, and win/loss
+- **Animated UI** — Card hover effects, turn indicators, animated notifications, confetti on win
+- **No login required** — Open the page and start playing instantly
+- **Responsive design** — Works on desktop and mobile browsers
 
-## Code scaffolding
+## Development
 
-Run `ng generate component component-name` to generate a new component. You can also use `ng generate directive|pipe|service|class|guard|interface|enum|module`.
+### Prerequisites
 
-## Build
+- Node.js 20+
+- npm
 
-Run `ng build` to build the project. The build artifacts will be stored in the `dist/` directory.
+### Setup
 
-## Running unit tests
+```bash
+npm install
+```
 
-Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
+### Development server
 
-## Running end-to-end tests
+```bash
+npm start
+```
 
-Run `ng e2e` to execute the end-to-end tests via a platform of your choice. To use this command, you need to first add a package that implements end-to-end testing capabilities.
+Navigate to `http://localhost:4200/`. The app auto-reloads on source changes.
 
-## Further help
+### Build
 
-To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+```bash
+npm run build
+```
+
+Production build with base-href configuration:
+
+```bash
+npm run deploy
+```
+
+Build artifacts go to `dist/uno-game/browser/`.
+
+### Running tests
+
+```bash
+npm test
+```
+
+## Deployment
+
+The project includes a GitHub Actions workflow (`.github/workflows/deploy.yml`) that automatically builds and deploys to GitHub Pages on every push to `master`.
+
+1. Push to `master`
+2. Go to repo **Settings → Pages** and set **Source** to **GitHub Actions**
+3. The app is live at `https://suhruthy.github.io/UnoCardGame/`
+
+## Tech Stack
+
+- [Angular 18](https://angular.dev/) — Framework
+- [Angular Signals](https://angular.dev/guide/signals) — Reactive state management
+- [Web Audio API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API) — Synthesized sound effects
+- [GitHub Actions](https://github.com/features/actions) — CI/CD pipeline
+- [GitHub Pages](https://pages.github.com/) — Hosting
+
+## Project Structure
+
+```
+src/
+├── app/
+│   ├── components/
+│   │   ├── card/             # Individual UNO card display
+│   │   ├── color-picker/     # Wild card color selection modal
+│   │   ├── game-board/       # Main game interface and logic
+│   │   ├── home/             # Landing page with rules
+│   │   └── player-hand/      # Player's hand of cards
+│   ├── models/               # Card, Player, GameState interfaces
+│   └── services/
+│       ├── game.service.ts   # Core game logic, AI, state management
+│       └── sound.service.ts  # Web Audio API sound synthesis
+├── styles.css                # Global styles
+└── index.html                # Entry point
+```
+
+## License
+
+MIT

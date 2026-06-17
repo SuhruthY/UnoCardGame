@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { GameService } from '../../services/game.service';
@@ -15,12 +15,12 @@ import { ColorPickerComponent } from '../color-picker/color-picker.component';
   styleUrls: ['./game-board.component.css'],
 })
 export class GameBoardComponent implements OnInit {
-  gameState;
-  currentPlayer;
-  topCard;
-  mustDraw;
-  isHumanTurn;
-  notifications;
+  readonly gameState;
+  readonly currentPlayer;
+  readonly topCard;
+  readonly mustDraw;
+  readonly isHumanTurn;
+  readonly notifications;
 
   showColorPicker = false;
   pendingWildCard: Card | null = null;
@@ -82,17 +82,6 @@ export class GameBoardComponent implements OnInit {
       case 'yellow': return '#fdd835';
       default: return 'linear-gradient(135deg, #e53935 25%, #1e88e5 25%, #1e88e5 50%, #43a047 50%, #43a047 75%, #fdd835 75%)';
     }
-  }
-
-  getDisplayColor(card: Card): string {
-    const c = card.chosenColor || card.color;
-    return c === 'wild' ? 'wild' : c;
-  }
-
-  getBotHandCount(): number {
-    const s = this.gameState();
-    const bot = s.players.find(p => !p.isHuman);
-    return bot?.hand.length || 0;
   }
 
   playAgain(): void {
