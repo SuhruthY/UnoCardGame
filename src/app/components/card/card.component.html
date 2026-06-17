@@ -1,0 +1,9 @@
+<div class="card" [class.playable]="playable" [class]="bgClass" (click)="onClick()">
+  <div class="card-corner top-left">
+    <span class="card-value">{{ displayValue }}</span>
+  </div>
+  <div class="card-center">{{ displayValue }}</div>
+  <div class="card-corner bottom-right">
+    <span class="card-value">{{ displayValue }}</span>
+  </div>
+</div>

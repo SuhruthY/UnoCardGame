@@ -1,0 +1,233 @@
+<div class="game-board">
+  <nav class="game-nav">
+    <div class="nav-brand">
+      <span class="nav-icon">🃏</span>
+      <span class="nav-title">UNO Battle Royale</span>
+    </div>
+    <div class="nav-right">
+      <button class="btn-nav" (click)="goHome()">🏠 Home</button>
+      <button class="btn-nav logout" (click)="logout()">Logout</button>
+    </div>
+  </nav>
+
+  <div *ngIf="gameState().phase === 'setup'" class="setup-screen">
+    <h1>UNO</h1>
+    <p class="subtitle">Classic card game</p>
+
+    <div class="setup-card">
+      <label class="setup-label">Number of Players</label>
+      <div class="player-count-select">
+        <button
+          *ngFor="let n of [2, 3, 4]"
+          class="count-btn"
+          [class.selected]="playerCount === n"
+          (click)="setPlayerCount(n)"
+        >{{ n }}</button>
+      </div>
+
+      <div class="player-inputs">
+        <div *ngFor="let name of playerNames; let i = index" class="player-input-row">
+          <span class="player-icon">{{ i === 0 ? '👤' : '🤖' }}</span>
+          <input
+            *ngIf="i === 0; else aiName"
+            class="name-input"
+            [(ngModel)]="playerNames[i]"
+            placeholder="Your name"
+            maxlength="16"
+          />
+          <ng-template #aiName>
+            <span class="ai-name">{{ name }}</span>
+          </ng-template>
+        </div>
+      </div>
+
+      <label class="adult-toggle">
+        <input type="checkbox" [(ngModel)]="adultMode" />
+        <span class="toggle-label">🍻 Adult Mode</span>
+        <span class="toggle-desc">Truth or Dare penalties for losers</span>
+      </label>
+
+      <button class="btn-start" (click)="startGame()">Start Game</button>
+    </div>
+  </div>
+
+  <div *ngIf="gameState().phase === 'playing'" class="playing-area">
+    <div class="opponents-area">
+      <div
+        *ngFor="let player of gameState().players; let i = index"
+        class="opponent"
+        [class.active]="player.isCurrentTurn"
+        [class.you]="player.isHuman"
+        [class.revealed]="player.handRevealTurns && player.handRevealTurns > 0"
+      >
+        <div class="player-label">
+          {{ player.name }}
+          <span class="player-badge" *ngIf="player.isHuman">(you)</span>
+          <span class="player-badge" *ngIf="!player.isHuman">🤖</span>
+          <span class="reveal-badge" *ngIf="player.handRevealTurns && player.handRevealTurns > 0">
+            👀 {{ player.handRevealTurns }}
+          </span>
+        </div>
+        <div class="card-count">{{ player.hand.length }} cards</div>
+        <div class="revealed-hand" *ngIf="player.handRevealTurns && player.handRevealTurns > 0">
+          <div
+            *ngFor="let c of player.hand"
+            class="mini-card-color"
+            [style.background]="getCardColor(c)"
+          ></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-center">
+      <div class="draw-pile">
+        <div class="pile-card back">UNO</div>
+        <div class="pile-label">
+          {{ gameState().pendingDrawCount > 0 ? '+' + gameState().pendingDrawCount : '' }}
+          {{ gameState().drawPile.length }} left
+        </div>
+      </div>
+
+      <div class="discard-area">
+        <app-card
+          *ngIf="topCard() as tc"
+          [card]="tc"
+          [playable]="false"
+        ></app-card>
+      </div>
+    </div>
+
+    <div class="current-player-section" *ngIf="isHumanTurn()">
+      <div class="current-player-info">
+        <span class="player-name">{{ currentPlayer()!.name }}</span>
+        <span class="turn-indicator">Your turn</span>
+      </div>
+
+      <div class="drawn-cards" *ngIf="gameState().drawnCards.length > 0">
+        <div class="drawn-label">Drawn card{{ gameState().drawnCards.length > 1 ? 's' : '' }}:</div>
+        <div class="drawn-row">
+          <app-card
+            *ngFor="let dc of gameState().drawnCards"
+            [card]="dc"
+            [playable]="canPlayCard(dc)"
+            (cardClick)="canPlayCard(dc) ? onPlayCard(dc) : null"
+          ></app-card>
+        </div>
+      </div>
+
+      <app-player-hand
+        [cards]="currentPlayer()!.hand"
+        [isCurrentTurn]="true"
+        [canPlayCheck]="canPlayCard.bind(this)"
+        (playCard)="onPlayCard($event)"
+      ></app-player-hand>
+
+      <div class="action-buttons">
+        <button class="btn-draw" (click)="drawCard()" *ngIf="mustDraw()">
+          {{ gameState().pendingDrawCount > 0 ? 'Draw +' + gameState().pendingDrawCount : 'Draw 1' }}
+        </button>
+        <button class="btn-pass" (click)="passTurn()" *ngIf="gameState().drawnThisTurn">
+          Keep &amp; Pass
+        </button>
+      </div>
+    </div>
+
+    <div class="current-player-section ai-thinking" *ngIf="!isHumanTurn()">
+      <div class="thinking-text">{{ currentPlayer()!.name }} is thinking...</div>
+      <div class="opponent-hand-preview">
+        <div class="mini-card" *ngFor="let _ of currentPlayer()!.hand">
+          <div class="mini-card-inner"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="gameState().phase === 'finished'" class="winner-screen">
+    <h1>{{ gameState().winner?.name }} Wins!</h1>
+    <p>Congratulations!</p>
+
+    <div class="match-result-box" *ngIf="matchResult">
+      <div class="xp-gained" [class.xp-loss]="matchResult.xpEarned === 25">
+        <span class="xp-icon">{{ matchResult.xpEarned >= 100 ? '🏆' : '💪' }}</span>
+        <span class="xp-amount">+{{ matchResult.xpEarned }} XP</span>
+      </div>
+      <div class="new-badges" *ngIf="matchResult.newBadges.length > 0">
+        <div class="badges-title">New Badges Unlocked!</div>
+        <div class="badges-row">
+          <div *ngFor="let b of matchResult.newBadges" class="new-badge-item" [title]="b.name + ': ' + b.description">
+            <span class="badge-emoji">{{ b.emoji }}</span>
+            <span class="badge-name">{{ b.name }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="winner-actions">
+      <button class="btn-start" (click)="restartGameFromBoard()">Play Again</button>
+      <button class="btn-home" (click)="goHome()">Home</button>
+    </div>
+  </div>
+</div>
+
+<app-color-picker
+  *ngIf="showColorPicker"
+  (colorSelected)="onColorSelected($event)"
+></app-color-picker>
+
+<div *ngIf="gameState().phase === 'penalty'" class="penalty-overlay">
+  <div class="penalty-modal">
+
+    <!-- Header -->
+    <div class="penalty-header">
+      <span class="header-emoji">⚖️</span> Penalty Phase
+    </div>
+    <div class="penalty-sub">
+      {{ gameState().winner!.name }} won!
+      <strong>{{ currentLoserName() }}</strong> must face the consequences
+    </div>
+
+    <!-- Step 1: Choose a penalty -->
+    <div *ngIf="gameState().penalty.waitingForSelection" class="penalty-choice">
+      <p class="penalty-question">Pick your poison</p>
+      <div class="penalty-cards">
+        <button
+          *ngFor="let opt of gameState().penalty.penaltyOptions"
+          class="penalty-card-option"
+          (click)="onPenaltySelect(opt.id)"
+        >
+          <span class="penalty-card-emoji">{{ opt.emoji }}</span>
+          <span class="penalty-card-name">{{ opt.name }}</span>
+          <span class="penalty-card-desc">{{ opt.description }}</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Step 2: Reveal selected penalty -->
+    <div *ngIf="!gameState().penalty.waitingForSelection && !gameState().penalty.showApplied && gameState().penalty.currentPenalty as penalty" class="penalty-reveal">
+      <div class="card-flip-container">
+        <div class="card-flip-inner">
+          <div class="card-flip-front">
+            <span class="flip-icon">❓</span>
+            <span class="flip-label">Penalty</span>
+          </div>
+          <div class="card-flip-back">
+            <span class="flip-emoji">{{ penalty.emoji }}</span>
+            <span class="flip-name">{{ penalty.name }}</span>
+            <span class="flip-detail">{{ penalty.detail }}</span>
+          </div>
+        </div>
+      </div>
+      <button class="btn-start" (click)="onApplyPenalty()">Apply Penalty</button>
+    </div>
+
+    <!-- Step 3: Result -->
+    <div *ngIf="gameState().penalty.showApplied" class="penalty-result">
+      <div class="result-icon">✅</div>
+      <p class="result-message">{{ gameState().penalty.appMessage }}</p>
+      <button class="btn-start" (click)="onPenaltyNext()">
+        {{ gameState().penalty.currentLoserIndex < gameState().penalty.loserIds.length - 1 ? 'Next Loser' : 'Finish' }}
+      </button>
+    </div>
+
+  </div>
+</div>

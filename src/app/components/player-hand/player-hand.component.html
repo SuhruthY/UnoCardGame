@@ -1,0 +1,11 @@
+<div class="player-hand" [class.active]="isCurrentTurn">
+  <div class="cards-row">
+    <app-card
+      *ngFor="let card of cards"
+      [card]="card"
+      [playable]="isPlayable(card)"
+      (cardClick)="onCardClick(card)"
+    ></app-card>
+  </div>
+  <div *ngIf="cards.length === 0" class="empty-hand">No cards</div>
+</div>

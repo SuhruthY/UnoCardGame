@@ -1,0 +1,52 @@
+.color-picker-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.color-picker {
+  background: #1a1a2e;
+  border-radius: 16px;
+  padding: 24px;
+  text-align: center;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+}
+
+.color-picker h3 {
+  color: white;
+  margin: 0 0 16px;
+  font-size: 20px;
+}
+
+.color-options {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.color-btn {
+  width: 80px;
+  height: 80px;
+  border: none;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: bold;
+  color: white;
+  cursor: pointer;
+  transition: transform 0.15s, box-shadow 0.15s;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.4);
+}
+
+.color-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+
+.color-red { background: #e53935; }
+.color-blue { background: #1e88e5; }
+.color-green { background: #43a047; }
+.color-yellow { background: #fdd835; color: #333; text-shadow: none; }

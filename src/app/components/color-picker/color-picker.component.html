@@ -1,0 +1,15 @@
+<div class="color-picker-overlay">
+  <div class="color-picker">
+    <h3>Choose a color</h3>
+    <div class="color-options">
+      <button
+        *ngFor="let c of colors"
+        class="color-btn"
+        [class]="'color-' + c.name"
+        (click)="select(c.name)"
+      >
+        {{ c.label }}
+      </button>
+    </div>
+  </div>
+</div>

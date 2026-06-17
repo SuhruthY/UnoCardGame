@@ -1,0 +1,150 @@
+<div class="home-screen">
+
+  <!-- Top Nav -->
+  <nav class="top-nav">
+    <div class="nav-brand">
+      <span class="nav-icon">🃏</span>
+      <span class="nav-title">UNO Battle Royale</span>
+    </div>
+    <div class="nav-right">
+      <span class="nav-xp">⭐ Lv.{{ user()?.stats?.level || 1 }}</span>
+      <button class="btn-icon" (click)="refreshData()" title="Refresh data">🔄</button>
+      <button class="btn-logout" (click)="logout()">Logout</button>
+    </div>
+  </nav>
+
+  <div class="home-content">
+
+    <!-- Hero / Play -->
+    <section class="hero-section">
+      <button class="btn-play" (click)="startGame()">
+        <span class="play-icon">▶</span>
+        <span class="play-text">PLAY NOW</span>
+        <span class="play-sub">{{ user()?.stats?.gamesPlayed || 0 }} games played</span>
+      </button>
+    </section>
+
+    <!-- Profile + Stats -->
+    <div class="stats-row">
+
+      <!-- Profile Card -->
+      <div class="profile-card">
+        <div class="profile-avatar">{{ user()?.username?.charAt(0)?.toUpperCase() || '?' }}</div>
+        <div class="profile-info">
+          <span class="profile-name">{{ user()?.username || 'Player' }}</span>
+          <span class="profile-level">Level {{ user()?.stats?.level || 1 }}</span>
+        </div>
+        <div class="xp-bar-wrapper">
+          <div class="xp-bar-bg">
+            <div class="xp-bar-fill" [style.width.%]="(xpProgress / xpNeeded) * 100"></div>
+          </div>
+          <span class="xp-text">{{ xpProgress }} / {{ xpNeeded }} XP</span>
+        </div>
+        <div class="profile-badges" *ngIf="badges.length > 0">
+          <span
+            *ngFor="let b of badges"
+            class="badge-item"
+            [title]="b.name + ': ' + b.description"
+          >{{ b.emoji }}</span>
+        </div>
+      </div>
+
+      <!-- Stats Grid -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <span class="stat-value">{{ user()?.stats?.gamesPlayed || 0 }}</span>
+          <span class="stat-label">Games</span>
+        </div>
+        <div class="stat-card win">
+          <span class="stat-value">{{ user()?.stats?.wins || 0 }}</span>
+          <span class="stat-label">Wins</span>
+        </div>
+        <div class="stat-card loss">
+          <span class="stat-value">{{ user()?.stats?.losses || 0 }}</span>
+          <span class="stat-label">Losses</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value">{{ winRate }}%</span>
+          <span class="stat-label">Win Rate</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value">⭐ {{ user()?.stats?.xp || 0 }}</span>
+          <span class="stat-label">Total XP</span>
+        </div>
+        <div class="stat-card">
+          <span class="stat-value">🏅 {{ badges.length }}</span>
+          <span class="stat-label">Badges</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Three Column: AI Opponents + Leaderboard + Recent Matches -->
+    <div class="bottom-row">
+
+      <!-- AI Opponents -->
+      <div class="panel ai-panel">
+        <h3 class="panel-title">🤖 AI Opponents</h3>
+        <div class="ai-list">
+          <div *ngFor="let comp of computerProfiles" class="ai-entry">
+            <div class="ai-header">
+              <span class="ai-name">{{ comp.name }}</span>
+              <span class="ai-record">W{{ comp.wins }} / L{{ comp.losses }}</span>
+            </div>
+            <div class="ai-penalties" *ngIf="getActivePenaltyKeys(comp).length > 0; else noPenalty">
+              <div *ngFor="let pid of getActivePenaltyKeys(comp)" class="ai-penalty-row">
+                <span class="ai-penalty-badge">{{ penaltyEmoji(pid) }}</span>
+                <span class="ai-penalty-name">{{ penaltyName(pid) }}</span>
+              </div>
+            </div>
+            <ng-template #noPenalty>
+              <span class="ai-clean">✅ No active penalties</span>
+            </ng-template>
+          </div>
+          <div class="ai-empty" *ngIf="computerProfiles.length === 0">
+            Play your first game to create AI opponents!
+          </div>
+        </div>
+      </div>
+
+      <!-- Leaderboard -->
+      <div class="panel leaderboard-panel">
+        <h3 class="panel-title">🏆 Leaderboard</h3>
+        <div class="lb-list">
+          <div
+            *ngFor="let entry of leaderboard; let i = index"
+            class="lb-entry"
+            [class.me]="entry.username === user()?.username"
+          >
+            <span class="lb-rank">#{{ i + 1 }}</span>
+            <span class="lb-name">{{ entry.username }}</span>
+            <span class="lb-level">Lv.{{ entry.level }}</span>
+            <span class="lb-xp">⭐ {{ entry.xp }}</span>
+          </div>
+          <div class="lb-empty" *ngIf="leaderboard.length === 0">
+            No players yet. Be the first!
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Matches -->
+      <div class="panel matches-panel">
+        <h3 class="panel-title">📋 Recent Matches</h3>
+        <div class="match-list">
+          <div *ngFor="let m of recentMatches" class="match-entry" [class.match-win]="m.won" [class.match-loss]="!m.won">
+            <span class="match-result">{{ m.won ? 'W' : 'L' }}</span>
+            <div class="match-info">
+              <span class="match-players">{{ m.playerCount }} players</span>
+              <span class="match-date">{{ formatDate(m.date) }}</span>
+            </div>
+            <span class="match-xp">+{{ m.xpEarned }} XP</span>
+          </div>
+          <div class="match-empty" *ngIf="recentMatches.length === 0">
+            No matches played yet. Start your first game!
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
